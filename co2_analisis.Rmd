@@ -1,0 +1,381 @@
+---
+title: "Análisis de las emisiones de CO2 a nivel mundial"
+author: "J.L Canillas"
+date: "20 de noviembre de 2018"
+output:
+  html_document:
+    code_folding: hide
+    toc : true
+    toc_float: true
+---
+<style>
+body {
+text-align: justify}
+</style>
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
+
+## 1. Introducción.
+
+El objetivo del trabajo va a ser estudiar a nivel mundial y europeo, la evolución de una serie de variables relacionadas con el medio ambiente y la energía, centrando sobretodo el análisis en las emisiones de gases de CO2 responsables del cambio climático. 
+
+Concretando más, el trabajo va a consistir en tres partes diferenciadas, aunque relacionadas:
+
+* En primer lugar un análisis de la varianza referido a la relación entre el PIB per cápita y el precio de los combustibles fósiles.
+
+* Un análisis de componentes principales, en el cual vamos a intentar mostrar la interrelación que existe entre variables de crecimiento, consumo, industria, con variables contaminantes.
+
+* Un análisis cluster, en el cual se va a estudiar, para el caso de la UE, la evolución de la producción de renovables y emisiones de CO2 desde 1990 hasta 2016, realizando agrupaciones según como avancen estas dos variables.
+
+Se pretende dar una visión general de lo importante que es tener en cuenta las emisiones de gases nocivos, y como la utilización de energías renovables es crucial para luchar contra el cambio climático (esto lo veremos muy bien en el análisis clúster).
+
+## 2. Análisis de la varianza.
+
+En primer lugar abrimos los datos y transformamos las variables nominales en factor.
+
+```{r}
+library(readxl)
+datos<- read_excel("D:/Universidad/4_ADE/Tecnicas_estadisticas/Trabajo_individual/datos_VAR.xlsx")
+datos$P_GSO_N <- as.factor(datos$P_GSO_N)
+datos$P_DIE_N <- as.factor(datos$P_DIE_N)
+```
+
+### 2.1. Análisis exploratorio.
+
+Resulta interesante realizar un análisis exploratorio de los datos para ver si alguna variable contiene algún error o algún valor perdido:
+
+```{r,results = 'asis'}
+pander::pandoc.table(summary(datos))
+```
+
+Vemos como no existen valores perdidos la base de datos. Además, el PIB per cápita se ha expresado en logaritmos para eliminar la influencia de posibles valores atípicos.
+
+El precio de los combustibles vienen expresados en dólares, al igual que el PIB per cápita, aunque en este último, al estar expresados en logaritmos, se van a tomar los valores más altos como referencia a los países con mayor nivel de PIB per cápita.
+
+
+Se va a estudiar a continuación una posible relación entre el precio de la gasolina y el diésel (alto o bajo, considerando alto si supera los 1,5 dólares) y el PIB per cápita.
+Gráficamente lo podemos observar en las siguientes cajas:
+
+```{r}
+boxplot(datos$PIB_PC_LN ~ datos$P_GSO_N, 
+        main = "Precio de la gasolina según el PIB per cápita", las = 1, col = "blue4")
+
+boxplot(datos$PIB_PC_LN ~ datos$P_DIE_N, 
+        main = "Precio del diésel según el PIB per cápita", las = 1, col = "blue4")
+```
+
+A simple vista vemos como aquellos países que tengan un mayor nivel de renta per cápita, a su vez van a poseer mayores gastos en adquisición de combustibles. Existen algunas excepciones vistas en las colas del gráfico. También vemos como la relación en el caso de la gasolina y el diésel es muy similar, aún así vamos a incluir estas dos variables como independiente a la hora de estimar el modelo.
+
+### 2.2. Estimación y validación del modelo.
+
+El modelo estimado va a contrastar si realmente existen diferencias entre los grupos. La variable dependiente serán las emisiones de CO2 y las variables independientes el precio de la gasolina y el precio del diésel. Veremos si existen diferencias en la cantidad emitida según las energías renovables que se produzcan.
+
+```{r}
+modelo1 <- aov(datos$PIB_PC_LN ~ datos$P_GSO_N, datos$P_DIE_N)  
+              
+summary(modelo1)
+```
+
+El p-valor es inferior a 0,05 lo que en principio podemos rechazar la hipótesis nula de medias iguales y afirmar que si existen diferencias entre los diferentes grupos. El precio de la gasolina llega a incidir, al menos en parte, el nivel de renta per cápita.
+Realmente ya para validar lo anterior dicho se debe contrastar el test de la F mediante el cumplimiento de las hipótesis de homogeneidad de varianzas y normalidad de los residuos.
+
+Previamente, podemos verlo o intuirlo gráficamente:
+
+```{r}
+par(mfrow = c(2, 2))
+plot(modelo1)
+```
+
+En el primer gráfico se observa cómo no existe mucha dispersión de los residuos, ya que no realiza un posible forma de embudo, lo que en cierto modo confirma la homogeneidad de las varianzas. En el segundo gráfico los puntos se acercan bastante a la línea, esto puede confirmar la normalidad de los residuos.
+
+### 2.3. Validación de hipótesis.
+Lo dicho anteriormente se puede contrastar con varias pruebas, en concreto vamos a determinar si verdaderamente existe homogeneidad en las varianzas y normalidad en los residuos.
+```{r}
+bartlett.test(datos$PIB_PC_LN ~ datos$P_GSO_N, datos$P_DIE_N)
+             
+   
+shapiro.test(residuals(modelo1))
+```
+
+Vemos como el test de Bartlett es superior a 0,05 lo que no llegamos a rechazar la hipótesis nula de homogeneidad en las varianzas. Justo lo que sospechábamos en el gráfico de arriba se cumple.
+
+Por otro lado, el test de Shapiro tampoco rechaza la hipótesis nula de normalidad en los residuos, ya que es muy superior a 0,05 y por tanto afirmamos que los residuos están normalizados.
+
+Por último, no sería necesario realizar el test de Kruskal ya que se han cumplido las hipótesis anteriores y aunque solo existe un grupo de niveles (Gasolina a precio alto o bajo), vamos a ver con el test de Tukey las diferencias existentes y si es significativa.
+
+### 2.4. Relación entre PIB per cápita y precio de los combustibles.
+
+Como se ha dicho anteriormente, procedemos a realizar el test de Tukey:
+```{r}
+TukeyHSD(modelo1, conf.level = 0.95)
+```
+
+Confirma todo lo anterior, ya que la relación es significativa y por tanto existen diferencias entre el grupo Alto y Bajo. Esto quiere decir que aquellos países que tengan una renta per cápita mayor, normalmente también van a tener precios de los combustibles muy elevados, lo mismo, pero a la inversa ocurre con aquellos países que tenga una renta per cápita menor, que tendrán precio de la gasolina menores. Esto puede influir en las emisiones o en la producción de energías no renovables, ya que, al tener un precio mayor, se optan por otros tipos de combustibles. Realmente esto no tiene por qué ser así y la producción o no de energías renovables puede verse condicionada por otro tipo de factores. Mas tarde y con el análisis de los componentes principales veremos que existe relación entre el PIB y el consumo de un país y sus emisiones de CO2.
+
+## 3. Análisis de Componentes Principales.
+
+En este apartado se va a intentar reducir la dimensión de un conjunto de variables para intentar dar una explicación sencilla (como mucho utilizar dos dimensiones) y así explicar que variables de las seleccionadas influyen en gran medida en las emisiones de CO2.
+
+En este caso vamos a utilizar una base de datos distinta, la cual contiene un amplio conjunto de variables referidas tanto a emisiones, como variables de crecimiento económico e industria (que son las que utilizaremos en esta técnica).
+
+```{r}
+rm(list=ls())
+library(readxl)
+datos2 <- read_excel("datos_ACP.xlsx")
+```
+
+### 3.1. Análisis exploratorio.
+
+A continuación se muestra un análisis exploratorio de los datos:
+```{r,results = 'asis'}
+pander::pandoc.table(summary(datos2))
+```
+
+Vemos como por ejemplo en la variable "EMI_CO2" las observaciones son muy heterogéneas, y el máximo y el mínimo difieren muchísimo. Lo importante del análisis será la variabilidad que exista y no la escala mayor de estas, por ello se tipificarán los datos posteriormente.
+
+De la base de datos vamos a escoger un subconjunto para el análisis de componentes, este estará formado por todas las variables de la base a excepción de "EMI_CO2", que posteriormente se integrará como variable dependiente en un modelo de regresión.
+
+```{r}
+subdatos <- subset(datos2, select = c(ECO2_LIQUIDO,
+                               VA_INDUS,GTO_CONSUFINAL,
+                               PIB,CONTAMI_AIRE))
+```
+
+La variables referidas a emisiones de CO2 están expresadas en toneladas métricas, el VAB de la industria en porcentaje del PIB, las variable PIB y Gasto en consumo final están expresadas en dólares y la variable contaminación del aire es el porcentaje de personas que exceden el valor indicativo de la Organización Mundial de la Salud (OMS).
+
+### 3.2. Análisis de las correlaciones.
+
+Es importante que las variables originales estén correlacionadas entre sí, por ello lo primero que se va a realizar es la matriz de correlaciones:
+
+```{r}
+correlaciones <- cor(subdatos)
+knitr::kable(correlaciones)
+```
+
+Podemos encontrar algunas relaciones a simple vista como GTO_CONSUFINAL con ECO2_LIQUIDO o PIB, aunque de manera más visual lo vemos gráficamente a continuación:
+```{r}
+library(corrplot)
+sig <- cor.mtest(subdatos, conf.level = 0.95)
+corrplot(correlaciones, method = "number", type = "lower",p.mat = sig[[1]])
+```
+
+Se muestran las variables menos correlacionadas tachadas con una cruz, dejando visuales aquellas variables que sí tienen más relación con otras variables. Encontramos por ejemplo que el PIB tiene una correlación prácticamente perfecta con la variable gasto en consumo final. También se observa relación, aunque menor entre el VAB de Industria y la contaminación del aire y sobre todo entre las emisiones de CO2 líquido y el gasto en consumo final y el PIB.
+
+Esta visualización también la encontramos con la función ezCor:
+
+```{r}
+ez::ezCor(subdatos, r_size_lims = c(4, 8), label_size = 3)
+```
+
+En la parte superior se muestran las correlaciones de forma numérica, y en la parte inferior se muestran los gráficos de dispersión con sus respectivos intervalos de confianza, así como una recta de regresión donde se acumulan nuestros casos (cuanto más próximos estén los puntos a la recta, mayor correlación).
+
+Antes de entrar en la creación de los componentes principales, se va a proceder a tipificar los datos para evitar problemas de escala.
+
+```{r}
+DatosTIP <- scale(subdatos)
+knitr::kable(head(DatosTIP))
+```
+
+### 3.3. Estimación del modelo de componentes principales.
+
+Ahora si procedemos a reducir la dimensionalidad de las variables una vez que hemos visto que existe correlación entre estas.
+```{r}
+modelo1 <- prcomp(subdatos, scale = TRUE)
+summary(modelo1)
+```
+
+En el summary se muestran las cinco componentes objeto del análisis, cada una de ellas contiene tres tipos de información muy interesantes. Nos interesa sobre todo la proporción de varianza que explica cada componente, ya que esto nos hace una idea de cuantos componentes vamos a escoger. Vemos en la proporción acumulativa que si recogemos dos componentes (PC1 y PC2) ya estaríamos explicando un 89% del modelo.
+
+Para una mayor exactitud, vamos a seleccionar a aquellas componentes cuyo autovalor sea mayor que 1.
+
+```{r}
+autovalores <- modelo1$sdev^2
+autovalores
+selec <- sum(autovalores > 1)
+selec
+```
+
+Hemos procedido buscando en el modelo aquellos autovalores mayores que 1, después seleccionamos aquellos que superen la unidad, y tal como sospechábamos anteriormente, nos quedamos con dos componentes. Gráficamente lo podemos observar en el gráfico de sedimentación:
+```{r}
+plot(autovalores, main = "Gráfico de Sedimentación", 
+     xlab = "Nº de Autovalor", ylab="Valor", pch = 16, col = "red4", type = "b", 
+     lwd = 2, las = 1)
+abline(h = 1, lty = 2, col = "green4")
+```
+
+### 3.4. Cargas factoriales.
+
+Una vez seleccionadas las componentes principales, vamos a medir la relación entre las componentes retenidas y las variables originales, a esto se le denomina "cargas factoriales".
+```{r}
+coeficientes <- modelo1$rotation
+cargas <- t(coeficientes[, 1:2])*(sqrt(autovalores[1:2]))
+knitr::kable(cargas)
+```
+
+Para el componente PC1 las mayores cargas se concentran en las variables ECO2_LIQUIDO, GTO_CONSUFINAL y PIB. Para el componente PC2 las mayores cargas se concentran en las variables VA_INDUS y CONTAMI_AIRE.
+
+Gráficamente lo podemos observar mejor:
+```{r}
+factoextra::fviz_pca_biplot(modelo1)
+```
+
+A partir de aquí, vamos a nombrar a cada componente en función de las cargas factoriales de cada una de estas, así pues, tenemos que:
+
+* PC1 va a venir referido a "Factores económicos ligados a la contaminación".
+* PC2 va a venir referido a "Contaminación provocada por la industria".
+
+Por último, guardamos las dos componentes retenidas en la base de datos original para realizar a continuación la regresión lineal:
+
+```{r}
+datos2 <- cbind(datos2, modelo1$x[, 1:2])
+```
+
+### 3.5. Regresión lineal: comportamiento de las emisiones de CO2.
+
+Por último, vamos a crear un regresión lineal donde la variable dependiente será "EMI_CO2", que viene referida a las emisiones de CO2 y las variables independientes los componentes nombrados en el apartado anterior.
+```{r}
+regre2 <- lm(EMI_CO2 ~ PC1+PC2, data = datos2)
+summary(regre2)
+```
+
+Observamos como el resultado de la regresión es significativo, ya que hemos obtenidos un p-valor muy bajo y obtenemos por tanto un nivel de confianza del 99% para los dos componentes, además de un R2 muy alto.
+También observamos el valor de la estimación, el cual es positivo para los factores económicos ligados a la contaminación y negativo para la contaminación ligada a la industria.
+
+Esto quiere decir en primer lugar, que las emisiones de CO2 van a estar ligadas de forma positiva con las variables dentro de los factores económicos, si se produce una expansión del PIB o del gasto en consumo final, también se producirá un aumento de las emisiones de CO2, especialmente las compuestas por aquellas derivadas de líquidos.
+En segundo lugar, tendríamos una relación negativa entre las emisiones de CO2 y contaminación ligada a la industria, en términos de que, si el valor agregado bruto de la industria es menor, también se produce una reducción de las emisiones de CO2 y también se produce dicha reducción en la cantidad de contaminación en el aire.
+
+Vemos así una relación clara tanto en variables económicas como industriales, una posible causa de las emisiones de CO2 en nuestro planeta.
+
+## 4. Análisis clúster.
+
+Con el análisis clúster, en vez de tener países como observaciones, ahora tenemos años, y la evolución va a venir referida a la UE28. Vamos a agrupar la producción de renovables y emisiones de CO2 en diferentes grupos, según creamos conveniente y según lo que arrojen los análisis. Aclarar que las emisiones de CO2 vienen expresadas en toneladas de petróleo equivalente, al igual que la producción de renovables.
+
+En primer lugar, como siempre, vamos a abrir los datos, además de colocar correctamente la primera columna, como los nombres de las observaciones:
+
+```{r}
+library(readxl)
+datos3 <- data.frame(read_excel("Datos_CLUS.xlsx"))
+datos3$Fecha <- as.factor(datos3$Fecha)
+rownames(datos3) <- datos3[,1]
+datos3[,1] <- NULL
+```
+
+### 4.1. Análisis exploratorio.
+
+Se muestran a continuación las dos variables que vamos a utilizar para el análisis, asi como una serie de gráficos exploratorios que nos sirven  para ponernos en situación. 
+
+```{r,results = 'asis'}
+pander::pandoc.table(summary(datos3))
+```
+
+```{r}
+par(mfrow = c(2, 2))
+hist(datos3$Renovables, main = "Producción de renovables", xlab = "")
+hist(datos3$Emisiones_CO2, main = "Emisiones de CO2", xlab = "")
+boxplot(datos3$Renovables)
+boxplot(datos3$Emisiones_CO2)
+```
+
+En los gráficos observamos claramente como se sitúan las producciones de energía renovable y emisiones de CO2 a lo largo de los últimos 27 años. La mediana se sitúa a niveles muy bajos para el caso de producción de renovables, en su lugar, la mediana de las emisiones se mantiene muy alta en el tiempo. Si es verdad que el esfuerzo en contaminar menos en los últimos años es favorable, pero el resultado si tenemos en cuenta en periodo de 27 años es muy desfavorable.
+
+La media de renovables se sitúa en 60,44 y la media de contaminación en 4203. Se ve un avance si tenemos en cuenta el mínimo de renovables y el máximo de emisiones.
+
+### 4.2. Elección óptima de clústeres: Método jerárquico.
+
+En primer lugar, vamos a utilizar el método de clasificación jerárquico. También usaremos la función NbClust para ver cuántos grupos sería óptimo formar. En combinación entre nuestro criterio y los distintos análisis que se desarrollen, se decidirá formar más o menos grupos.
+
+Vamos a tipificar los datos para evitar problemas de escala:
+
+```{r,results = 'asis'}
+datostip <- scale(datos3)
+pander::pandoc.table(head(datostip))
+```
+
+Para crear el clúster para vamos a utilizar el método de Ward, para calcular las distancias vamos a utilizar la distancia euclidea.
+
+Previamente podemos observar en el siguiente gráfico de dispersión como situan las observaciones:
+```{r}
+library(scales)
+par(mfrow = c(1,1 ))
+plot(datostip, col = alpha("orange", 0.5), pch = 19, las=1)
+text(datostip, rownames(datostip), pos = 3, cex = .6)
+```
+
+Existe una relación entre una mayor contaminación y una menor utilización de energias renovables. Asi como una relación entre una mayor utilización de energías renovables y una menor contaminación.
+
+A continuación se muestra el dendrograma:
+```{r}
+d <- dist(datostip, method = "euclidean") 
+cluster <- hclust(d, method="ward.D")
+plot(cluster, cex = .6, xlab = "", ylab = "Distancia", 
+     sub = "Cluster de grupos para los años") 
+```
+
+A priori podríamos podar el dendrograma en dos grupos, pero uno de ellos tendría excesivas observaciones comparado con el otro. Vamos a ver pues, que nos dice la función NBClust:
+```{r}
+NbClust::NbClust(data = datostip, 
+        distance = "euclidean", 
+        method = "ward.D", max.nc = 5)
+```
+
+Tras utilizar diversos métodos para ver cuál es el número óptimo de grupos, la función concluye que el mejor número de clúster a formar es 2, de acuerdo a 13 índices. Por otra parte, 6 índices recomiendan que el número de grupos a formar sea 3. Vamos a ceñirnos a esta última conclusión y vamos a formar 3 clústeres, ya que si formamos 2 resultarían desproporcionados en observaciones. 
+
+### 4.3. Elección óptima de clústeres: Método no jerárquico.
+
+Como hemos decidido formar el número de grupos, vamos a utilizar el método no jerárquico de k-medias. En primer lugar, fijamos la semilla para que el resultado no varíe, y posteriormente, creamos una variable que contenga 3 grupos diferenciados:
+
+```{r}
+set.seed(1)
+tresgrupos <- kmeans(scale(datos3), 3)
+```
+y a continuación observamos el dendrograma y un gráfico de representación de los grupos:
+```{r}
+factoextra::fviz_dend(cluster, 3)
+factoextra::fviz_cluster(tresgrupos, datostip, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE)
+```
+
+En el dendrograma se observan diferentes colores en función del grupo al que pertenece cada observación. En este caso vemos como podamos más abajo. También lo podemos observar en el gráfico con mayor claridad, donde se ve un grupo claramente diferente (el verde), junto a dos grupos que se llegan a solapar en una parte (rojo y azul). También se observan los centroides de cada grupo.
+
+Procedemos mediante k-medias a crear 3 grupos o clústeres:
+
+```{r}
+kme <- kmeans(datostip, 3)
+kme
+```
+
+Se han creado 3 grupos con 8, 13 y 6 observaciones. Más abajo se muestra a que grupo ha sido seleccionado cada observación.
+```{r,results = 'asis'}
+datostipkm <- data.frame(datostip, GRUPO = factor(kme$cluster))
+datos3$GRUPO <- factor(kme$cluster)
+pander::pandoc.table(datos3)
+```
+
+### 4.4. Interpretación de las emisiones de CO2 y energías renovables en Europa.
+
+Una vez tenemos 3 grupos relativamente diferentes, vamos a comentar que características tienen cada uno de ellos:
+```{r,results = 'asis'}
+pander::pandoc.table(aggregate(cbind(Renovables, Emisiones_CO2) ~ GRUPO, data = datos3, FUN = mean))
+```
+
+* El grupo 1 contiene los últimos 8 años (el último considerado es 2016), y tienen la característica de ser los años menos contaminantes y con mayor producción de energías renovables, lo cual es positivo de cara al futuro.
+
+* El grupo 2 contiene a las primeras observaciones (desde 1990 hasta 2002), y se caracterizan por ser los años con menor producción de renovables. Llama la atención que en estos años no se haya producido tanta contaminación como en el grupo intermedio, el cual es más avanzado en el tiempo.
+
+* El grupo 3 es el grupo intermedio entre los anteriores e incluye desde el 2003 hasta el 2008. Destaca que, a pesar del incremento de renovables, de media se contaminaron más estos años que en el grupo 2, a pesar de que en este último se produjeron menos renovables.
+
+En los siguientes boxplot vemos al relación clara entre contaminación y producción de renovables (cuanto más renovables, menos contaminación y viceversa):
+
+```{r}
+par(mfrow = c(1, 2))
+boxplot(Renovables ~ GRUPO, main = "Boxplot de producción de renovables", col = c("palevioletred1","orange","green2"), data = datos3, las = 1)
+boxplot(Emisiones_CO2 ~ GRUPO, main = "Boxplot de las emisiones de CO2", col = c("palevioletred1","orange","green2"), data = datos3, las = 1)
+```
+
+Es destacable que entre los años 2003-2008 las emisiones de CO2 aumentaron, a pesar que en el periodo anterior (1990-2002) la tendencia era a la baja. No es hasta 2009 cuando hay un salto muy claro en la bajada de emisiones de C02 (de 4304mtoe en 2008 a 3951mtoe en 2009).
+
+También podría utilizarse el análisis de la varianza, o la MANOVA en el caso de análisis múltiple para comprobar la significación de los clústeres. En este análisis no se va a realizar para no repetir análisis similares a los del primer apartado.
+
+Como conclusión, la tendencia actual en la producción de energías renovables es a la alza, al igual que es a la baja las emisiones de CO2, sin embargo, esto no es suficiente, ya que los expertos siguen afirmando que es demasiado poco el esfuerzo que se realiza en intentar evitar el cambio climático, la temperatura del planeta sigue subiendo y el permafrost se está descongelando, dando lugar a todavía más emisiones nocivas para el planeta. Debe tomarse conciencia y actuar lo más rápido posible para evitar catástrofes mayores.
+
+
