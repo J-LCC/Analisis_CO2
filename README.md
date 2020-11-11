@@ -29,8 +29,8 @@ Poder resumir varias variables a través de componentes principales nos permite 
 
 ¿Cómo ha sido la evolución de las emisiones de CO2 en los últimos años? **Al incrementar el uso de las energías renovables, ¿Cómo se ha reducido la emisión? ** En el siguiente gráfico podemos observar cómo han evolucionado las variables CO2 y Renovables y que relación tienen ambas.
 
-![Correlation](https://user-images.githubusercontent.com/54073772/98850637-5c0b5a00-2455-11eb-90b1-3aea8ea0434e.PNG)
+![Correlation](https://user-images.githubusercontent.com/54073772/98852065-69294880-2457-11eb-82c4-84a73eeeaecf.PNG)
 
 El gráfico sorprende en el sentido que no vemos una disminución notoria de las emisiones de CO2 hasta el año 2009, en los años noventa existian menos energías renovables en funcionamiento, aún asi la contaminación es mayor en el periodo 2003-2008 aunque la producción de renovables era mayor. Este gráfico nos intuye la existencia de 3 grupos o más bien, 3 periodos significativos en la relación entre CO2 y producción de renovables. A través de la clusterización, usando k-means asignamos cada observación a cada periodo distintivo, llevandonos al siguiente resultado:
 
-![Cluster](https://user-images.githubusercontent.com/54073772/98851216-3d599300-2456-11eb-9bc1-3581359a408e.PNG)
+![Cluster](https://user-images.githubusercontent.com/54073772/98852012-5747a580-2457-11eb-8fe5-4b3f75b3f9e4.PNG)
