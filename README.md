@@ -31,6 +31,8 @@ Poder resumir varias variables a través de componentes principales nos permite 
 
 ![Correlation](https://user-images.githubusercontent.com/54073772/98852065-69294880-2457-11eb-82c4-84a73eeeaecf.PNG)
 
-El gráfico sorprende en el sentido que no vemos una disminución notoria de las emisiones de CO2 hasta el año 2009, en los años noventa existian menos energías renovables en funcionamiento, aún asi la contaminación es mayor en el periodo 2003-2008 aunque la producción de renovables era mayor. Este gráfico nos intuye la existencia de 3 grupos o más bien, 3 periodos significativos en la relación entre CO2 y producción de renovables. A través de la clusterización, usando k-means asignamos cada observación a cada periodo distintivo, llevandonos al siguiente resultado:
+El gráfico sorprende en el sentido que no vemos una disminución notoria de las emisiones de CO2 hasta el año 2009, en los años noventa existían menos energías renovables en funcionamiento, aún así la contaminación es mayor en el periodo 2003-2008 aunque la producción de renovables era mayor. Este gráfico nos intuye la existencia de 3 grupos o más bien, 3 periodos significativos en la relación entre CO2 y producción de renovables. 
+
+A través de la clusterización, usando k-means asignamos cada observación a cada periodo distintivo, llevándonos al siguiente resultado:
 
 ![Cluster](https://user-images.githubusercontent.com/54073772/98852012-5747a580-2457-11eb-8fe5-4b3f75b3f9e4.PNG)
