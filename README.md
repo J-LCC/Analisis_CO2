@@ -27,7 +27,7 @@ Poder resumir varias variables a través de componentes principales nos permite 
 
 ### Relación entre CO2 y Renovables. Clusterización
 
-¿Cómo ha sido la evolución de las emisiones de CO2 en los últimos años? **Al incrementar el uso de las energías renovables, ¿Cómo se ha reducido la emisión? ** En el siguiente gráfico podemos observar cómo han evolucionado las variables CO2 y Renovables y que relación tienen ambas.
+¿Cómo ha sido la evolución de las emisiones de CO2 en los últimos años? **Al incrementar el uso de las energías renovables, ¿Cómo se ha reducido la emisión?** En el siguiente gráfico podemos observar cómo han evolucionado las variables CO2 y Renovables y que relación tienen ambas.
 
 ![Correlation](https://user-images.githubusercontent.com/54073772/98852065-69294880-2457-11eb-82c4-84a73eeeaecf.PNG)
 
